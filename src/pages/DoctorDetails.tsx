@@ -11,22 +11,46 @@ import {
   Stethoscope,
   UserPlus,
   Trash2,
+  Edit3,
+  CheckCircle2,
+  Clock,
+  ShieldCheck,
+  Activity,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
 import { useDoctorTracker } from '@/context/DoctorTrackerContext';
 import StatusBadge from '@/components/common/StatusBadge';
 import EmptyState from '@/components/common/EmptyState';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import PatientFormModal from '@/components/forms/PatientFormModal';
+import { toast } from 'sonner';
 
 export const DoctorDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { getDoctorById, getPatientsByDoctorId, addPatient, deletePatient } = useDoctorTracker();
+  const { getDoctorById, getPatientsByDoctorId, addPatient, deletePatient, updateDoctor } =
+    useDoctorTracker();
 
   const doctor = getDoctorById(id || '');
   const associatedPatients = id ? getPatientsByDoctorId(id) : [];
 
+  const [activeTab, setActiveTab] = useState<'patients' | 'analytics' | 'schedule'>('patients');
   const [isAddPatientModalOpen, setIsAddPatientModalOpen] = useState(false);
   const [patientToRemove, setPatientToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [isEditDoctorModalOpen, setIsEditDoctorModalOpen] = useState(false);
+
+  // Edit doctor local form state
+  const [editHospital, setEditHospital] = useState(doctor?.hospital || '');
+  const [editPhone, setEditPhone] = useState(doctor?.phone || '');
+  const [editEmail, setEditEmail] = useState(doctor?.email || '');
+  const [editBio, setEditBio] = useState(doctor?.bio || '');
 
   if (!doctor) {
     return (
@@ -54,6 +78,30 @@ export const DoctorDetails: React.FC = () => {
     }
   };
 
+  const handleSaveDoctorEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateDoctor(doctor.id, {
+      hospital: editHospital,
+      phone: editPhone,
+      email: editEmail,
+      bio: editBio,
+    });
+    setIsEditDoctorModalOpen(false);
+    toast.success('Physician Profile Updated', {
+      description: 'Contact and affiliation records successfully refreshed.',
+    });
+  };
+
+  // 6 Months consultation trend for this doctor
+  const doctorConsultationTrend = [
+    { month: 'Sep', visits: Math.max(12, doctor.patientsCount - 16), followups: 8 },
+    { month: 'Oct', visits: Math.max(16, doctor.patientsCount - 12), followups: 11 },
+    { month: 'Nov', visits: Math.max(18, doctor.patientsCount - 8), followups: 10 },
+    { month: 'Dec', visits: Math.max(22, doctor.patientsCount - 4), followups: 14 },
+    { month: 'Jan', visits: Math.max(26, doctor.patientsCount - 2), followups: 16 },
+    { month: 'Feb', visits: doctor.patientsCount + associatedPatients.length, followups: 18 },
+  ];
+
   return (
     <div className="space-y-6 pb-12">
       {/* Breadcrumb Back Link */}
@@ -65,7 +113,23 @@ export const DoctorDetails: React.FC = () => {
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>Back to Physicians Directory</span>
         </Link>
-        <StatusBadge status={doctor.status} />
+        <div className="flex items-center gap-2">
+          <StatusBadge status={doctor.status} />
+          <button
+            type="button"
+            onClick={() => {
+              setEditHospital(doctor.hospital);
+              setEditPhone(doctor.phone);
+              setEditEmail(doctor.email);
+              setEditBio(doctor.bio || '');
+              setIsEditDoctorModalOpen(true);
+            }}
+            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer border border-slate-200"
+            title="Edit Physician Profile"
+          >
+            <Edit3 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Doctor Profile Banner Card */}
@@ -175,104 +239,293 @@ export const DoctorDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Associated Patients Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">
-              Associated Patients ({associatedPatients.length})
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Patients directly assigned under {doctor.name}'s care team
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsAddPatientModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition-colors cursor-pointer self-start sm:self-auto"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            <span>+ Add Patient</span>
-          </button>
-        </div>
-
-        {associatedPatients.length === 0 ? (
-          <div className="py-8">
-            <EmptyState
-              title="No patients currently assigned"
-              description={`There are currently no active patient records under ${doctor.name}.`}
-              action={
-                <button
-                  type="button"
-                  onClick={() => setIsAddPatientModalOpen(true)}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-teal-600 rounded-xl"
-                >
-                  Admit First Patient
-                </button>
-              }
-            />
-          </div>
-        ) : (
-          <div className="overflow-x-auto mt-4">
-            <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200/80">
-                <tr>
-                  <th className="px-4 py-3">Patient Name</th>
-                  <th className="px-4 py-3">Condition / Diagnosis</th>
-                  <th className="px-4 py-3">Contact</th>
-                  <th className="px-4 py-3">Blood Group</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Admitted Date</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                {associatedPatients.map((pat) => (
-                  <tr key={pat.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center shrink-0 ring-1 ring-teal-100">
-                          {pat.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <span className="font-semibold text-slate-900 block">{pat.name}</span>
-                          <span className="text-[11px] text-slate-400 block">{pat.gender}, {pat.age} yrs</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 font-semibold text-slate-900">
-                      {pat.condition}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-500">
-                      <div>{pat.email}</div>
-                      <div>{pat.phone}</div>
-                    </td>
-                    <td className="px-4 py-3.5 text-xs font-semibold text-slate-700">
-                      {pat.bloodGroup || 'N/A'}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <StatusBadge status={pat.status} size="sm" />
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-500">
-                      {pat.registeredDate}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setPatientToRemove({ id: pat.id, name: pat.name })}
-                        title="Remove patient from list"
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Tabs Navigation */}
+      <div className="flex border-b border-slate-200/80 gap-6 text-sm font-semibold text-slate-500">
+        <button
+          type="button"
+          onClick={() => setActiveTab('patients')}
+          className={`pb-3 border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+            activeTab === 'patients'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent hover:text-slate-900'
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          <span>Associated Patients ({associatedPatients.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('analytics')}
+          className={`pb-3 border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+            activeTab === 'analytics'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent hover:text-slate-900'
+          }`}
+        >
+          <Activity className="h-4 w-4" />
+          <span>Caseload Analytics</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('schedule')}
+          className={`pb-3 border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+            activeTab === 'schedule'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent hover:text-slate-900'
+          }`}
+        >
+          <Clock className="h-4 w-4" />
+          <span>Clinic Schedule & Practice</span>
+        </button>
       </div>
+
+      {/* Tab 1: Associated Patients */}
+      {activeTab === 'patients' && (
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">
+                Associated Patients ({associatedPatients.length})
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Patients directly assigned under {doctor.name}'s care team
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAddPatientModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg border border-teal-200 transition-colors cursor-pointer self-start sm:self-auto"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>+ Add Patient</span>
+            </button>
+          </div>
+
+          {associatedPatients.length === 0 ? (
+            <div className="py-8">
+              <EmptyState
+                title="No patients currently assigned"
+                description={`There are currently no active patient records under ${doctor.name}.`}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setIsAddPatientModalOpen(true)}
+                    className="px-4 py-2 text-xs font-semibold text-white bg-teal-600 rounded-xl"
+                  >
+                    Admit First Patient
+                  </button>
+                }
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto mt-4">
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200/80">
+                  <tr>
+                    <th className="px-4 py-3">Patient Name</th>
+                    <th className="px-4 py-3">Condition / Diagnosis</th>
+                    <th className="px-4 py-3">Contact</th>
+                    <th className="px-4 py-3">Blood Group</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Admitted Date</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                  {associatedPatients.map((pat) => (
+                    <tr key={pat.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center shrink-0 ring-1 ring-teal-100">
+                            {pat.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-slate-900 block">{pat.name}</span>
+                            <span className="text-[11px] text-slate-400 block">{pat.gender}, {pat.age} yrs</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 font-semibold text-slate-900">
+                        {pat.condition}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-slate-500">
+                        <div>{pat.email}</div>
+                        <div>{pat.phone}</div>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs font-semibold text-slate-700">
+                        {pat.bloodGroup || 'N/A'}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <StatusBadge status={pat.status} size="sm" />
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-slate-500">
+                        {pat.registeredDate}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setPatientToRemove({ id: pat.id, name: pat.name })}
+                          title="Remove patient from list"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 2: Caseload Analytics */}
+      {activeTab === 'analytics' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
+            <h3 className="text-base font-semibold text-slate-900">Monthly Patient Volume</h3>
+            <p className="text-xs text-slate-500 mb-4">Patient appointments and clinical follow-ups</p>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={doctorConsultationTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="docVisitsGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B' }} />
+                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748B' }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="visits"
+                    name="Appointments"
+                    stroke="#2563EB"
+                    strokeWidth={2.5}
+                    fill="url(#docVisitsGrad)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="followups"
+                    name="Follow-ups"
+                    stroke="#0D9488"
+                    strokeWidth={2}
+                    fill="transparent"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Treatment Performance</h3>
+              <p className="text-xs text-slate-500 mb-4">Clinical outcome adherence benchmarks</p>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                    <span>Recovery Rate</span>
+                    <span className="text-emerald-600">92.4%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: '92.4%' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                    <span>Patient Retention</span>
+                    <span className="text-blue-600">88.1%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-blue-600 h-full rounded-full" style={{ width: '88.1%' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                    <span>Charting Compliance</span>
+                    <span className="text-teal-600">99.0%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-teal-600 h-full rounded-full" style={{ width: '99.0%' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-blue-50/70 border border-blue-200/60 rounded-xl text-xs text-blue-900 mt-4">
+              <span className="font-semibold block">Quality Benchmark Met</span>
+              <span className="text-blue-700 text-[11px]">Ranked in the top 5% of hospital specialists for patient safety and timely charting.</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Clinic Schedule & Hours */}
+      {activeTab === 'schedule' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-blue-600" />
+              <span>Office Consultation Hours</span>
+            </h3>
+            <div className="divide-y divide-slate-100 text-xs">
+              <div className="py-2.5 flex justify-between font-medium">
+                <span className="text-slate-600">Monday - Wednesday</span>
+                <span className="text-slate-900 font-semibold">08:30 AM – 04:30 PM</span>
+              </div>
+              <div className="py-2.5 flex justify-between font-medium">
+                <span className="text-slate-600">Thursday - Friday</span>
+                <span className="text-slate-900 font-semibold">09:00 AM – 03:30 PM</span>
+              </div>
+              <div className="py-2.5 flex justify-between font-medium">
+                <span className="text-slate-600">Saturday (Alternate)</span>
+                <span className="text-amber-700 font-semibold">10:00 AM – 01:00 PM (Emergency Call)</span>
+              </div>
+              <div className="py-2.5 flex justify-between font-medium text-slate-400">
+                <span>Sunday</span>
+                <span>Off Duty</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-teal-600" />
+              <span>Credentialing & Coverage</span>
+            </h3>
+            <div className="space-y-3 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>Primary Ward: {doctor.hospital} ({doctor.roomNumber || 'Main Pavilion'})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>Standard Consultation: ${doctor.consultationFee || 220} USD</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>Accepted Networks: BlueCross, Medicare, UnitedHealth, Aetna</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>Emergency Pager: Internal Ext. #8892</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Patient Modal */}
       <PatientFormModal
@@ -282,6 +535,90 @@ export const DoctorDetails: React.FC = () => {
         onSubmitPatient={addPatient}
         title={`Admit Patient under ${doctor.name}`}
       />
+
+      {/* Edit Doctor Modal */}
+      {isEditDoctorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">Edit Physician Profile</h3>
+              <button
+                type="button"
+                onClick={() => setIsEditDoctorModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDoctorEdit} className="space-y-3 text-xs sm:text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Hospital Affiliation
+                </label>
+                <input
+                  type="text"
+                  value={editHospital}
+                  onChange={(e) => setEditHospital(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Direct Contact Phone
+                </label>
+                <input
+                  type="text"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Hospital Email
+                </label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Biography & Specialties
+                </label>
+                <textarea
+                  rows={3}
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl text-sm resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setIsEditDoctorModalOpen(false)}
+                  className="px-3.5 py-1.5 rounded-lg border text-slate-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-blue-600 text-white font-semibold"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Confirm Remove Patient Dialog */}
       <ConfirmDialog

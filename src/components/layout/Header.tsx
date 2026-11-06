@@ -14,12 +14,14 @@ interface HeaderProps {
   onToggleMobileSidebar: () => void;
   onOpenAddDoctor?: () => void;
   onOpenAddPatient?: () => void;
+  onOpenCommandMenu?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onToggleMobileSidebar,
   onOpenAddDoctor,
   onOpenAddPatient,
+  onOpenCommandMenu,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const { doctors, patients } = useDoctorTracker();
@@ -62,8 +64,11 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Global Search shortcut preview */}
-        <div className="hidden sm:flex items-center gap-2 pl-3 pr-4 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-400 hover:border-slate-300 transition-colors cursor-pointer w-64 md:w-80">
-          <Search className="h-3.5 w-3.5 text-slate-400" />
+        <div
+          onClick={onOpenCommandMenu}
+          className="hidden sm:flex items-center gap-2 pl-3 pr-4 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-400 hover:border-slate-300 transition-colors cursor-pointer w-64 md:w-80 group"
+        >
+          <Search className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
           <span className="flex-1 text-slate-400 truncate">Search doctors, patients, records...</span>
           <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 bg-white border border-slate-200 rounded shadow-2xs">
             ⌘K
