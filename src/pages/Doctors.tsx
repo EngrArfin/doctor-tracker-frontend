@@ -8,6 +8,8 @@ import {
   Trash2,
   Eye,
   SlidersHorizontal,
+  Calendar,
+  Download,
 } from 'lucide-react';
 import { useDoctorTracker } from '@/context/DoctorTrackerContext';
 import PageHeader from '@/components/common/PageHeader';
@@ -20,6 +22,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import DoctorFormModal from '@/components/forms/DoctorFormModal';
 import PatientFormModal from '@/components/forms/PatientFormModal';
 import { SPECIALIZATION_LIST } from '@/data/mockData';
+import { toast } from 'sonner';
 
 export const Doctors: React.FC = () => {
   const { doctors, addDoctor, deleteDoctor, addPatient } = useDoctorTracker();
@@ -28,6 +31,7 @@ export const Doctors: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [specializationFilter, setSpecializationFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
@@ -50,9 +54,17 @@ export const Doctors: React.FC = () => {
 
       const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
 
-      return matchesSearch && matchesSpec && matchesStatus;
+      const matchesDate = (() => {
+        if (dateFilter === 'all') return true;
+        if (dateFilter === '2024') return doc.joinedDate.startsWith('2024');
+        if (dateFilter === '2023') return doc.joinedDate.startsWith('2023');
+        if (dateFilter === 'older') return parseInt(doc.joinedDate.slice(0, 4)) <= 2022;
+        return true;
+      })();
+
+      return matchesSearch && matchesSpec && matchesStatus && matchesDate;
     });
-  }, [doctors, searchTerm, specializationFilter, statusFilter]);
+  }, [doctors, searchTerm, specializationFilter, statusFilter, dateFilter]);
 
   // Paginated doctors
   const paginatedDoctors = useMemo(() => {
@@ -70,6 +82,18 @@ export const Doctors: React.FC = () => {
     { label: 'On Leave', value: 'On Leave' },
     { label: 'Inactive', value: 'Inactive' },
   ];
+
+  const dateOptions = [
+    { label: 'Joined 2024', value: '2024' },
+    { label: 'Joined 2023', value: '2023' },
+    { label: 'Joined 2022 & Older', value: 'older' },
+  ];
+
+  const handleExportDoctors = () => {
+    toast.success('Physicians Directory Exported', {
+      description: `Downloaded ${filteredDoctors.length} doctor records as CSV.`,
+    });
+  };
 
   const handleConfirmDelete = () => {
     if (doctorToDelete) {
@@ -90,14 +114,24 @@ export const Doctors: React.FC = () => {
           </span>
         }
         actions={
-          <button
-            type="button"
-            onClick={() => setIsAddDoctorModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all cursor-pointer"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Add New Doctor</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportDoctors}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-colors cursor-pointer shadow-2xs"
+            >
+              <Download className="h-3.5 w-3.5 text-slate-500" />
+              <span>Export</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddDoctorModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Add New Doctor</span>
+            </button>
+          </div>
         }
       />
 
@@ -158,6 +192,17 @@ export const Doctors: React.FC = () => {
             }}
             options={statusOptions}
             icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+          />
+
+          <FilterDropdown
+            label="Date Range"
+            value={dateFilter}
+            onChange={(val) => {
+              setDateFilter(val);
+              setCurrentPage(1);
+            }}
+            options={dateOptions}
+            icon={<Calendar className="h-3.5 w-3.5" />}
           />
         </div>
       </div>

@@ -1,17 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { DoctorTrackerProvider, useDoctorTracker } from '@/context/DoctorTrackerContext';
 import DoctorFormModal from '@/components/forms/DoctorFormModal';
 import PatientFormModal from '@/components/forms/PatientFormModal';
+import CommandMenu from '@/components/common/CommandMenu';
 
 const DashboardLayoutContent: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+  const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
 
   const { addDoctor, addPatient } = useDoctorTracker();
+
+  // Global Ctrl+K / Cmd+K listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandMenuOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-[#F8FAFC] antialiased">
@@ -48,6 +62,7 @@ const DashboardLayoutContent: React.FC = () => {
           onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           onOpenAddDoctor={() => setIsDoctorModalOpen(true)}
           onOpenAddPatient={() => setIsPatientModalOpen(true)}
+          onOpenCommandMenu={() => setIsCommandMenuOpen(true)}
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
@@ -67,6 +82,14 @@ const DashboardLayoutContent: React.FC = () => {
         isOpen={isPatientModalOpen}
         onClose={() => setIsPatientModalOpen(false)}
         onSubmitPatient={addPatient}
+      />
+
+      {/* Global Command Menu (Cmd+K) */}
+      <CommandMenu
+        isOpen={isCommandMenuOpen}
+        onClose={() => setIsCommandMenuOpen(false)}
+        onOpenAddDoctor={() => setIsDoctorModalOpen(true)}
+        onOpenAddPatient={() => setIsPatientModalOpen(true)}
       />
     </div>
   );

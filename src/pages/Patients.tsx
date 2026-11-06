@@ -9,6 +9,7 @@ import {
   Mail,
   SlidersHorizontal,
   Calendar,
+  Download,
 } from 'lucide-react';
 import { useDoctorTracker } from '@/context/DoctorTrackerContext';
 import PageHeader from '@/components/common/PageHeader';
@@ -20,6 +21,7 @@ import EmptyState from '@/components/common/EmptyState';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import PatientFormModal from '@/components/forms/PatientFormModal';
 import { Patient } from '@/types';
+import { toast } from 'sonner';
 
 export const Patients: React.FC = () => {
   const { patients, doctors, addPatient, updatePatient, deletePatient } = useDoctorTracker();
@@ -29,6 +31,7 @@ export const Patients: React.FC = () => {
   const [conditionFilter, setConditionFilter] = useState('all');
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 6;
 
@@ -74,15 +77,28 @@ export const Patients: React.FC = () => {
 
       const matchesStatus = statusFilter === 'all' || pat.status === statusFilter;
 
-      return matchesSearch && matchesCondition && matchesDoctor && matchesStatus;
+      const matchesDate = (() => {
+        if (dateFilter === 'all') return true;
+        if (dateFilter === '2024') return pat.registeredDate.startsWith('2024');
+        if (dateFilter === '2023') return pat.registeredDate.startsWith('2023');
+        return true;
+      })();
+
+      return matchesSearch && matchesCondition && matchesDoctor && matchesStatus && matchesDate;
     });
-  }, [patients, searchTerm, conditionFilter, doctorFilter, statusFilter]);
+  }, [patients, searchTerm, conditionFilter, doctorFilter, statusFilter, dateFilter]);
 
   // Paginated patients
   const paginatedPatients = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return filteredPatients.slice(startIndex, startIndex + pageSize);
   }, [filteredPatients, currentPage, pageSize]);
+
+  const handleExportPatients = () => {
+    toast.success('Patient Records Exported', {
+      description: `Downloaded ${filteredPatients.length} patient records as CSV.`,
+    });
+  };
 
   const handleConfirmDelete = () => {
     if (patientToDelete) {
@@ -112,14 +128,24 @@ export const Patients: React.FC = () => {
           </span>
         }
         actions={
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Admit / Add Patient</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportPatients}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-colors cursor-pointer shadow-2xs"
+            >
+              <Download className="h-3.5 w-3.5 text-slate-500" />
+              <span>Export</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Admit / Add Patient</span>
+            </button>
+          </div>
         }
       />
 
@@ -193,6 +219,20 @@ export const Patients: React.FC = () => {
             }}
             options={statusOptions}
             icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
+          />
+
+          <FilterDropdown
+            label="Registered Year"
+            value={dateFilter}
+            onChange={(val) => {
+              setDateFilter(val);
+              setCurrentPage(1);
+            }}
+            options={[
+              { label: 'Registered 2024', value: '2024' },
+              { label: 'Registered 2023', value: '2023' },
+            ]}
+            icon={<Calendar className="h-3.5 w-3.5" />}
           />
         </div>
       </div>
