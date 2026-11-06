@@ -1,40 +1,106 @@
-// Define a type for your user (example)
-export interface User {
-    id: string;
-    name: string;
-    email: string;
-  }
-  
-  // Define a type for your app's theme (example)
-  export type Theme = 'light' | 'dark';
-  
-  // Define a type for your app's routes (example)
-  export type Route = {
-    path: string;
-    component: React.ComponentType;
-    exact?: boolean;
-  };
+// Core Domain Types for Doctor Tracker System
 
-  // ✅ Track Order History Data Type Definitions
-export type OrderDetailsType = {
-    orderId: string;
-    name: string;
-    street: string;
-    city: string;
-    state: string;
-    zip: string;
-    phone: string;
-    status: string;
-    pickupDate: string;
-    deliveryDate: string;
-    items: string;
-    notes: string;
-};
+export type DoctorSpecialization =
+  | 'Cardiology'
+  | 'Neurology'
+  | 'Pediatrics'
+  | 'Orthopedics'
+  | 'Dermatology'
+  | 'Oncology'
+  | 'Psychiatry'
+  | 'General Medicine';
 
-export type OrderHistoryItem = {
-    orderId: string;
-    name: string;
-    deliveryPrice: string;
-    status: string;
-    orderDetails: OrderDetailsType;
-};
+export type DoctorStatus = 'Active' | 'On Leave' | 'Inactive';
+
+export type PatientStatus =
+  | 'Active'
+  | 'Recovered'
+  | 'Under Observation'
+  | 'Critical';
+
+export interface Doctor {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  specialization: DoctorSpecialization;
+  hospital: string;
+  avatarUrl?: string;
+  patientsCount: number;
+  joinedDate: string;
+  status: DoctorStatus;
+  experienceYears: number;
+  rating: number;
+  roomNumber?: string;
+  bio?: string;
+  education?: string;
+  consultationFee?: number;
+}
+
+export interface Patient {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  age: number;
+  gender: 'Male' | 'Female' | 'Other';
+  condition: string;
+  status: PatientStatus;
+  doctorId: string;
+  doctorName: string;
+  registeredDate: string;
+  lastVisitDate: string;
+  avatarUrl?: string;
+  bloodGroup?: string;
+  emergencyContact?: string;
+  notes?: string;
+}
+
+export interface DashboardStats {
+  totalDoctors: number;
+  totalPatients: number;
+  newPatientsThisMonth: number;
+  averagePatientsPerDoctor: number;
+  doctorsGrowthPct: number;
+  patientsGrowthPct: number;
+  newPatientsGrowthPct: number;
+  avgRatioGrowthPct: number;
+}
+
+export interface PatientRegistrationTrend {
+  month: string;
+  patients: number;
+  admissions: number;
+}
+
+export interface PatientsPerDoctorMetric {
+  doctorName: string;
+  patientCount: number;
+  specialization: string;
+}
+
+export interface SpecializationDistribution {
+  name: DoctorSpecialization;
+  value: number;
+  color: string;
+}
+
+export interface DoctorFilterState {
+  search: string;
+  specialization: string;
+  dateRange: 'all' | 'last-30' | 'last-90' | 'this-year';
+}
+
+export interface PatientFilterState {
+  search: string;
+  condition: string;
+  doctorId: string;
+  dateRange: 'all' | 'last-30' | 'last-90' | 'this-year';
+  status: string;
+}
+
+export interface PaginationState {
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+}

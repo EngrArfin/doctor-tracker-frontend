@@ -1,0 +1,83 @@
+import React, { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import Header from './Header';
+import { DoctorTrackerProvider, useDoctorTracker } from '@/context/DoctorTrackerContext';
+import DoctorFormModal from '@/components/forms/DoctorFormModal';
+import PatientFormModal from '@/components/forms/PatientFormModal';
+
+const DashboardLayoutContent: React.FC = () => {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
+  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+
+  const { addDoctor, addPatient } = useDoctorTracker();
+
+  return (
+    <div className="min-h-screen flex bg-[#F8FAFC] antialiased">
+      {/* Desktop Persistent Sidebar */}
+      <div className="hidden lg:block fixed inset-y-0 left-0 z-40 w-64">
+        <Sidebar
+          onOpenAddDoctor={() => setIsDoctorModalOpen(true)}
+          onOpenAddPatient={() => setIsPatientModalOpen(true)}
+        />
+      </div>
+
+      {/* Mobile Sidebar Backdrop & Drawer */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          {/* Drawer */}
+          <div className="fixed inset-y-0 left-0 w-64 shadow-2xl z-50">
+            <Sidebar
+              onCloseMobile={() => setMobileSidebarOpen(false)}
+              onOpenAddDoctor={() => setIsDoctorModalOpen(true)}
+              onOpenAddPatient={() => setIsPatientModalOpen(true)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+        <Header
+          onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          onOpenAddDoctor={() => setIsDoctorModalOpen(true)}
+          onOpenAddPatient={() => setIsPatientModalOpen(true)}
+        />
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Global Add Doctor Modal */}
+      <DoctorFormModal
+        isOpen={isDoctorModalOpen}
+        onClose={() => setIsDoctorModalOpen(false)}
+        onSubmitDoctor={addDoctor}
+      />
+
+      {/* Global Add Patient Modal */}
+      <PatientFormModal
+        isOpen={isPatientModalOpen}
+        onClose={() => setIsPatientModalOpen(false)}
+        onSubmitPatient={addPatient}
+      />
+    </div>
+  );
+};
+
+export const DashboardLayout: React.FC = () => {
+  return (
+    <DoctorTrackerProvider>
+      <DashboardLayoutContent />
+    </DoctorTrackerProvider>
+  );
+};
+
+export default DashboardLayout;
